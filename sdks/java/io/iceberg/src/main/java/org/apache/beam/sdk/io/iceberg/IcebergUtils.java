@@ -21,6 +21,9 @@ import static org.apache.beam.sdk.util.Preconditions.checkArgumentNotNull;
 import static org.apache.beam.sdk.util.Preconditions.checkStateNotNull;
 import static org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.base.Preconditions.checkState;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,6 +49,8 @@ import org.apache.beam.sdk.values.Row;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.annotations.VisibleForTesting;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableList;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableMap;
+import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.catalog.TableIdentifierParser;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.types.Type;
@@ -58,6 +63,9 @@ import org.joda.time.Instant;
 
 /** Utilities for converting between Beam and Iceberg types, made public for user's convenience. */
 public class IcebergUtils {
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   private IcebergUtils() {}
 
   private static final Map<Schema.TypeName, Type> BEAM_TYPES_TO_ICEBERG_TYPES =
@@ -637,5 +645,14 @@ public class IcebergUtils {
 
   static boolean validDirectWriteLimit(@Nullable Integer directWriteByteLimit) {
     return directWriteByteLimit != null && directWriteByteLimit >= 0;
+  }
+
+  public static TableIdentifier parseTableIdentifier(String table) {
+    try {
+      JsonNode jsonNode = OBJECT_MAPPER.readTree(table);
+      return TableIdentifierParser.fromJson(jsonNode);
+    } catch (JsonProcessingException e) {
+      return TableIdentifier.parse(table);
+    }
   }
 }

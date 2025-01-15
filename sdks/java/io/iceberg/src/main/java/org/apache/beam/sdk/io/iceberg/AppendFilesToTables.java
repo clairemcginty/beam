@@ -47,7 +47,6 @@ import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
-import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.io.FileIO;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.slf4j.Logger;
@@ -128,11 +127,12 @@ class AppendFilesToTables
         BoundedWindow window)
         throws IOException {
       String tableStringIdentifier = element.getKey();
-      Table table = getCatalog().loadTable(TableIdentifier.parse(element.getKey()));
+      Table table = getCatalog().loadTable(IcebergUtils.parseTableIdentifier(element.getKey()));
       Iterable<FileWriteResult> fileWriteResults = element.getValue();
       if (shouldSkip(table, fileWriteResults)) {
         return;
       }
+
 
       // vast majority of the time, we will simply append data files.
       // in the rare case we get a batch that contains multiple partition specs, we

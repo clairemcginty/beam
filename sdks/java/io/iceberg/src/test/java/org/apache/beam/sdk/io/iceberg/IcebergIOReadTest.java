@@ -111,13 +111,24 @@ public class IcebergIOReadTest {
 
   @Parameters
   public static Iterable<Object[]> data() {
-    return asList(new Object[][] {{false}, {true}});
+    String jsonId =
+        String.format("{\"namespace\": [\"default\"], \"name\": \"%s\"}", tableId());
+    String dottedId = String.format("default.%s", tableId());
+    return asList(
+        new Object[][] {{false, jsonId}, {false, dottedId}, {true, jsonId}, {true, dottedId}});
+  }
+
+  public static String tableId() {
+    return "table" + Long.toString(UUID.randomUUID().hashCode(), 16);
   }
 
   // TODO(#34168, ahmedabu98): Update tests when we close feature gaps between regular and cdc
   // sources
   @Parameter(0)
   public boolean useIncrementalScan;
+
+  @Parameter(1)
+  public String tableStringIdentifier;
 
   static class PrintRow extends PTransform<PCollection<Row>, PCollection<Row>> {
 
@@ -305,8 +316,7 @@ public class IcebergIOReadTest {
 
   @Test
   public void testSimpleScan() throws Exception {
-    TableIdentifier tableId =
-        TableIdentifier.of("default", "table" + Long.toString(UUID.randomUUID().hashCode(), 16));
+    TableIdentifier tableId = IcebergUtils.parseTableIdentifier(tableStringIdentifier);
     Table simpleTable = warehouse.createTable(tableId, TestFixtures.SCHEMA);
     final Schema schema = icebergSchemaToBeamSchema(TestFixtures.SCHEMA);
 

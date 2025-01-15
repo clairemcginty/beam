@@ -35,6 +35,7 @@ import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.Immuta
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableMap;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.catalog.TableIdentifierParser;
 import org.apache.iceberg.expressions.Evaluator;
 import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.types.TypeUtil;
@@ -69,7 +70,9 @@ public abstract class IcebergScanConfig implements Serializable {
   public Table getTable() {
     if (cachedTable == null) {
       cachedTable =
-          getCatalogConfig().catalog().loadTable(TableIdentifier.parse(getTableIdentifier()));
+          getCatalogConfig()
+              .catalog()
+              .loadTable(IcebergUtils.parseTableIdentifier(getTableIdentifier()));
     }
     return cachedTable;
   }
@@ -260,7 +263,7 @@ public abstract class IcebergScanConfig implements Serializable {
     public abstract Builder setTableIdentifier(String tableIdentifier);
 
     public Builder setTableIdentifier(TableIdentifier tableIdentifier) {
-      return this.setTableIdentifier(tableIdentifier.toString());
+      return this.setTableIdentifier(TableIdentifierParser.toJson(tableIdentifier));
     }
 
     public Builder setTableIdentifier(String... names) {
