@@ -20,24 +20,37 @@ package org.apache.beam.sdk.io.iceberg;
 import com.google.auto.value.AutoValue;
 import java.util.Map;
 import org.apache.beam.sdk.schemas.AutoValueSchema;
+import org.apache.beam.sdk.schemas.NoSuchSchemaException;
+import org.apache.beam.sdk.schemas.SchemaCoder;
+import org.apache.beam.sdk.schemas.SchemaRegistry;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.schemas.annotations.SchemaFieldNumber;
 import org.apache.beam.sdk.schemas.annotations.SchemaIgnore;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.catalog.TableIdentifierParser;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 @AutoValue
 @DefaultSchema(AutoValueSchema.class)
 abstract class FileWriteResult {
+  public static final SchemaCoder<FileWriteResult> CODER;
+
+  static {
+    try {
+      SchemaRegistry registry = SchemaRegistry.createDefault();
+      CODER = registry.getSchemaCoder(FileWriteResult.class);
+
+    } catch (NoSuchSchemaException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   private transient @MonotonicNonNull TableIdentifier cachedTableIdentifier;
   private transient @MonotonicNonNull DataFile cachedDataFile;
 
   @SchemaFieldNumber("0")
-  abstract String getTableIdentifierString();
+  abstract SerializableTableIdentifier getSerializableTableIdentifier();
 
   @SchemaFieldNumber("1")
   abstract SerializableDataFile getSerializableDataFile();
@@ -45,7 +58,7 @@ abstract class FileWriteResult {
   @SchemaIgnore
   public TableIdentifier getTableIdentifier() {
     if (cachedTableIdentifier == null) {
-      cachedTableIdentifier = IcebergUtils.parseTableIdentifier(getTableIdentifierString());
+      cachedTableIdentifier = getSerializableTableIdentifier().toTableIdentifier();
     }
     return cachedTableIdentifier;
   }
@@ -65,13 +78,13 @@ abstract class FileWriteResult {
   @AutoValue.Builder
   abstract static class Builder {
 
-    abstract Builder setTableIdentifierString(String tableIdString);
+    abstract Builder setSerializableTableIdentifier(SerializableTableIdentifier tableId);
 
     abstract Builder setSerializableDataFile(SerializableDataFile dataFile);
 
     @SchemaIgnore
     public Builder setTableIdentifier(TableIdentifier tableId) {
-      return setTableIdentifierString(TableIdentifierParser.toJson(tableId));
+      return setSerializableTableIdentifier(SerializableTableIdentifier.of(tableId));
     }
 
     public abstract FileWriteResult build();

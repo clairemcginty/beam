@@ -32,11 +32,12 @@ import org.apache.beam.sdk.values.WindowedValues;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.base.Preconditions;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.Iterables;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 class WriteDirectRowsToFiles
-    extends PTransform<PCollection<KV<String, Row>>, PCollection<FileWriteResult>> {
+    extends PTransform<PCollection<KV<TableIdentifier, Row>>, PCollection<FileWriteResult>> {
 
   private final DynamicDestinations dynamicDestinations;
   private final IcebergCatalogConfig catalogConfig;
@@ -55,14 +56,15 @@ class WriteDirectRowsToFiles
   }
 
   @Override
-  public PCollection<FileWriteResult> expand(PCollection<KV<String, Row>> input) {
+  public PCollection<FileWriteResult> expand(PCollection<KV<TableIdentifier, Row>> input) {
     return input.apply(
         ParDo.of(
             new WriteDirectRowsToFilesDoFn(
                 catalogConfig, dynamicDestinations, maxBytesPerFile, filePrefix)));
   }
 
-  private static class WriteDirectRowsToFilesDoFn extends DoFn<KV<String, Row>, FileWriteResult> {
+  private static class WriteDirectRowsToFilesDoFn
+      extends DoFn<KV<TableIdentifier, Row>, FileWriteResult> {
 
     private final DynamicDestinations dynamicDestinations;
     private final IcebergCatalogConfig catalogConfig;
@@ -99,11 +101,11 @@ class WriteDirectRowsToFiles
     @ProcessElement
     public void processElement(
         @SuppressWarnings("unused") ProcessContext context,
-        @Element KV<String, Row> element,
+        @Element KV<TableIdentifier, Row> element,
         BoundedWindow window,
         PaneInfo paneInfo)
         throws Exception {
-      String tableIdentifier = element.getKey();
+      TableIdentifier tableIdentifier = element.getKey();
       IcebergDestination destination = dynamicDestinations.instantiateDestination(tableIdentifier);
       WindowedValue<IcebergDestination> windowedDestination =
           WindowedValues.of(destination, window.maxTimestamp(), window, paneInfo);

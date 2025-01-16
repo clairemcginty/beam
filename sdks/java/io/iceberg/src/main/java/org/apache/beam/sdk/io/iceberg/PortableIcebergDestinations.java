@@ -21,15 +21,15 @@ import java.util.List;
 import java.util.Map;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.util.RowFilter;
-import org.apache.beam.sdk.util.RowStringInterpolator;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.values.ValueInSingleWindow;
 import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 class PortableIcebergDestinations implements DynamicDestinations {
   private final RowFilter rowFilter;
-  private final RowStringInterpolator interpolator;
+  private final TableIdentifierRowInterpolator interpolator;
   private final String fileFormat;
 
   private final @Nullable List<String> partitionFields;
@@ -37,7 +37,7 @@ class PortableIcebergDestinations implements DynamicDestinations {
   private final @Nullable Map<String, String> tableProperties;
 
   public PortableIcebergDestinations(
-      String destinationTemplate,
+      TableIdentifier destinationTemplate,
       String fileFormat,
       Schema inputSchema,
       @Nullable List<String> partitionFields,
@@ -46,7 +46,7 @@ class PortableIcebergDestinations implements DynamicDestinations {
       @Nullable List<String> fieldsToDrop,
       @Nullable List<String> fieldsToKeep,
       @Nullable String onlyField) {
-    this.interpolator = new RowStringInterpolator(destinationTemplate, inputSchema);
+    this.interpolator = new TableIdentifierRowInterpolator(destinationTemplate, inputSchema);
     this.partitionFields = partitionFields;
     this.sortFields = sortFields;
     this.tableProperties = tableProperties;
@@ -76,14 +76,15 @@ class PortableIcebergDestinations implements DynamicDestinations {
   }
 
   @Override
-  public String getTableStringIdentifier(ValueInSingleWindow<Row> element) {
-    return interpolator.interpolate(element);
+  public SerializableTableIdentifier getTableIdentifier(ValueInSingleWindow<Row> element) {
+    TableIdentifier tableIdentifier = interpolator.interpolate(element);
+    return SerializableTableIdentifier.of(tableIdentifier);
   }
 
   @Override
-  public IcebergDestination instantiateDestination(String dest) {
+  public IcebergDestination instantiateDestination(TableIdentifier dest) {
     return IcebergDestination.builder()
-        .setTableIdentifier(IcebergUtils.parseTableIdentifier(dest))
+        .setTableIdentifier(dest)
         .setTableCreateConfig(
             IcebergTableCreateConfig.builder()
                 .setSchema(getDataSchema())

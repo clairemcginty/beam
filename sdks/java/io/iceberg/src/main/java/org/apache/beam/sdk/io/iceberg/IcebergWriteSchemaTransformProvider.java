@@ -44,6 +44,7 @@ import org.apache.beam.sdk.values.Row;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.annotations.VisibleForTesting;
 import org.apache.iceberg.DistributionMode;
 import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.Duration;
 
@@ -60,7 +61,7 @@ public class IcebergWriteSchemaTransformProvider
 
   static final Schema OUTPUT_SCHEMA =
       Schema.builder()
-          .addStringField("table")
+          .addRowField("table", SerializableTableIdentifier.SCHEMA)
           .addFields(SnapshotInfo.getSchema().getFields())
           .build();
 
@@ -68,7 +69,7 @@ public class IcebergWriteSchemaTransformProvider
   public String description() {
     return "Writes Beam Rows to Iceberg.\n"
         + "Returns a PCollection representing the snapshots produced in the process, with the following schema:\n"
-        + "{\"table\" (str), \"operation\" (str), \"summary\" (map[str, str]), \"manifestListLocation\" (str)}";
+        + "{\"table\" {\"namespace\" (list[str]), \"tableName\" (str)}, \"operation\" (str), \"summary\" (map[str, str]), \"manifestListLocation\" (str)}";
   }
 
   @DefaultSchema(AutoValueSchema.class)
@@ -249,7 +250,7 @@ public class IcebergWriteSchemaTransformProvider
           IcebergIO.writeRows(configuration.getIcebergCatalog())
               .to(
                   new PortableIcebergDestinations(
-                      configuration.getTable(),
+                      IcebergUtils.parseTableIdentifier(configuration.getTable()),
                       FileFormat.PARQUET.toString(),
                       rows.getSchema(),
                       configuration.getPartitionFields(),
@@ -292,13 +293,15 @@ public class IcebergWriteSchemaTransformProvider
     }
 
     @VisibleForTesting
-    static class SnapshotToRow extends SimpleFunction<KV<String, SnapshotInfo>, Row> {
+    static class SnapshotToRow extends SimpleFunction<KV<TableIdentifier, SnapshotInfo>, Row> {
       @Override
-      public Row apply(KV<String, SnapshotInfo> input) {
+      public Row apply(KV<TableIdentifier, SnapshotInfo> input) {
+        SerializableTableIdentifier tableIdentifier =
+            SerializableTableIdentifier.of(input.getKey());
         SnapshotInfo snapshot = input.getValue();
 
         return Row.withSchema(OUTPUT_SCHEMA)
-            .addValue(input.getKey())
+            .addValue(tableIdentifier.toRow())
             .addValues(snapshot.toRow().getValues())
             .build();
       }

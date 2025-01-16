@@ -31,11 +31,12 @@ import org.apache.beam.sdk.values.WindowedValue;
 import org.apache.beam.sdk.values.WindowedValues;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.base.Preconditions;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 class WriteGroupedRowsToFiles
     extends PTransform<
-        PCollection<KV<ShardedKey<String>, Iterable<Row>>>, PCollection<FileWriteResult>> {
+        PCollection<KV<ShardedKey<TableIdentifier>, Iterable<Row>>>, PCollection<FileWriteResult>> {
   private final long maxBytesPerFile;
 
   private final DynamicDestinations dynamicDestinations;
@@ -55,7 +56,7 @@ class WriteGroupedRowsToFiles
 
   @Override
   public PCollection<FileWriteResult> expand(
-      PCollection<KV<ShardedKey<String>, Iterable<Row>>> input) {
+      PCollection<KV<ShardedKey<TableIdentifier>, Iterable<Row>>> input) {
     return input.apply(
         ParDo.of(
             new WriteGroupedRowsToFilesDoFn(
@@ -63,7 +64,7 @@ class WriteGroupedRowsToFiles
   }
 
   private static class WriteGroupedRowsToFilesDoFn
-      extends DoFn<KV<ShardedKey<String>, Iterable<Row>>, FileWriteResult> {
+      extends DoFn<KV<ShardedKey<TableIdentifier>, Iterable<Row>>, FileWriteResult> {
 
     private final DynamicDestinations dynamicDestinations;
     private final IcebergCatalogConfig catalogConfig;
@@ -92,12 +93,12 @@ class WriteGroupedRowsToFiles
     @ProcessElement
     public void processElement(
         ProcessContext c,
-        @Element KV<ShardedKey<String>, Iterable<Row>> element,
+        @Element KV<ShardedKey<TableIdentifier>, Iterable<Row>> element,
         BoundedWindow window,
         PaneInfo paneInfo)
         throws Exception {
 
-      String tableIdentifier = element.getKey().getKey();
+      TableIdentifier tableIdentifier = element.getKey().getKey();
       IcebergDestination destination = dynamicDestinations.instantiateDestination(tableIdentifier);
       WindowedValue<IcebergDestination> windowedDestination =
           WindowedValues.of(destination, window.maxTimestamp(), window, paneInfo);
