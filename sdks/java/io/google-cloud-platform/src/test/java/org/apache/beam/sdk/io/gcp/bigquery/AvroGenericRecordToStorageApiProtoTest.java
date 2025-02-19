@@ -48,7 +48,10 @@ import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.beam.sdk.coders.CoderException;
+import org.apache.beam.sdk.extensions.avro.coders.AvroCoder;
 import org.apache.beam.sdk.extensions.avro.schemas.utils.AvroUtils;
+import org.apache.beam.sdk.util.CoderUtils;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.base.Functions;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableList;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableMap;
@@ -348,24 +351,26 @@ public class AvroGenericRecordToStorageApiProtoTest {
       byte[] md5 = MessageDigest.getInstance("MD5").digest(BYTES);
 
       baseRecord =
-          new GenericRecordBuilder(BASE_SCHEMA)
-              .set("bytesValue", ByteBuffer.wrap(BYTES))
-              .set("byteBufferValue", ByteBuffer.wrap(BYTES))
-              .set("intValue", 3)
-              .set("longValue", 4L)
-              .set("floatValue", 3.14f)
-              .set("doubleValue", 2.68)
-              .set("stringValue", "I am a string. Hear me roar.")
-              .set("booleanValue", true)
-              .set("arrayValue", ImmutableList.of("one", "two", "red", "blue"))
-              .set(
-                  "enumValue",
-                  new GenericData.EnumSymbol(
-                      BASE_SCHEMA.getField("enumValue").schema(), TestEnum.TWO))
-              .set(
-                  "fixedValue",
-                  new GenericData.Fixed(BASE_SCHEMA.getField("fixedValue").schema(), md5))
-              .build();
+          CoderUtils.clone(
+              AvroCoder.generic(BASE_SCHEMA),
+              new GenericRecordBuilder(BASE_SCHEMA)
+                  .set("bytesValue", ByteBuffer.wrap(BYTES))
+                  .set("byteBufferValue", ByteBuffer.wrap(BYTES))
+                  .set("intValue", 3)
+                  .set("longValue", 4L)
+                  .set("floatValue", 3.14f)
+                  .set("doubleValue", 2.68)
+                  .set("stringValue", "I am a string. Hear me roar.")
+                  .set("booleanValue", true)
+                  .set("arrayValue", ImmutableList.of("one", "two", "red", "blue"))
+                  .set(
+                      "enumValue",
+                      new GenericData.EnumSymbol(
+                          BASE_SCHEMA.getField("enumValue").schema(), TestEnum.TWO))
+                  .set(
+                      "fixedValue",
+                      new GenericData.Fixed(BASE_SCHEMA.getField("fixedValue").schema(), md5))
+                  .build());
 
       BigDecimal numeric = BigDecimal.valueOf(4.2); // Logical type is of precision=2 and scale 1
       ByteString numericBytes = ByteString.copyFrom(new byte[] {42});
@@ -375,66 +380,72 @@ public class AvroGenericRecordToStorageApiProtoTest {
       UUID uuid = UUID.randomUUID();
 
       rawLogicalTypesRecord =
-          new GenericRecordBuilder(LOGICAL_TYPES_SCHEMA)
-              .set(
-                  "numericValue",
-                  new Conversions.DecimalConversion()
-                      .toBytes(
-                          numeric,
-                          Schema.create(Schema.Type.NULL), // dummy schema, not used,
-                          LogicalTypes.decimal(2, 1)))
-              .set(
-                  "bigNumericValue",
-                  new Conversions.DecimalConversion()
-                      .toBytes(
-                          bigNumeric,
-                          Schema.create(Schema.Type.NULL), // dummy schema, not used,
-                          LogicalTypes.decimal(77, 38)))
-              .set("dateValue", 42)
-              .set("timeMicrosValue", 42_000_000L)
-              .set("timeMillisValue", 42_000) // expects int
-              .set("timestampMicrosValue", 42_000_000L)
-              .set("timestampMillisValue", 42_000L)
-              .set("localTimestampMicrosValue", 42_000_000L)
-              .set("localTimestampMillisValue", 42_000L)
-              .set("uuidValue", uuid.toString())
-              .build();
+          CoderUtils.clone(
+              AvroCoder.generic(LOGICAL_TYPES_SCHEMA),
+              new GenericRecordBuilder(LOGICAL_TYPES_SCHEMA)
+                  .set(
+                      "numericValue",
+                      new Conversions.DecimalConversion()
+                          .toBytes(
+                              numeric,
+                              Schema.create(Schema.Type.NULL), // dummy schema, not used,
+                              LogicalTypes.decimal(2, 1)))
+                  .set(
+                      "bigNumericValue",
+                      new Conversions.DecimalConversion()
+                          .toBytes(
+                              bigNumeric,
+                              Schema.create(Schema.Type.NULL), // dummy schema, not used,
+                              LogicalTypes.decimal(77, 38)))
+                  .set("dateValue", 42)
+                  .set("timeMicrosValue", 42_000_000L)
+                  .set("timeMillisValue", 42_000) // expects int
+                  .set("timestampMicrosValue", 42_000_000L)
+                  .set("timestampMillisValue", 42_000L)
+                  .set("localTimestampMicrosValue", 42_000_000L)
+                  .set("localTimestampMillisValue", 42_000L)
+                  .set("uuidValue", uuid.toString())
+                  .build());
 
       jodaTimeLogicalTypesRecord =
-          new GenericRecordBuilder(LOGICAL_TYPES_SCHEMA)
-              .set("numericValue", numeric)
-              .set("bigNumericValue", bigNumeric)
-              .set("dateValue", new org.joda.time.LocalDate(1970, 1, 1).plusDays(42))
-              .set("timeMicrosValue", org.joda.time.LocalTime.fromMillisOfDay(42_000L))
-              .set("timeMillisValue", org.joda.time.LocalTime.fromMillisOfDay(42_000L))
-              .set("timestampMicrosValue", org.joda.time.Instant.ofEpochSecond(42L))
-              .set("timestampMillisValue", org.joda.time.Instant.ofEpochSecond(42L))
-              .set(
-                  "localTimestampMicrosValue",
-                  new org.joda.time.LocalDateTime(42_000L, org.joda.time.DateTimeZone.UTC))
-              .set(
-                  "localTimestampMillisValue",
-                  new org.joda.time.LocalDateTime(42_000L, org.joda.time.DateTimeZone.UTC))
-              .set("uuidValue", uuid)
-              .build();
+          CoderUtils.clone(
+              AvroCoder.generic(LOGICAL_TYPES_SCHEMA),
+              new GenericRecordBuilder(LOGICAL_TYPES_SCHEMA)
+                  .set("numericValue", numeric)
+                  .set("bigNumericValue", bigNumeric)
+                  .set("dateValue", new org.joda.time.LocalDate(1970, 1, 1).plusDays(42))
+                  .set("timeMicrosValue", org.joda.time.LocalTime.fromMillisOfDay(42_000L))
+                  .set("timeMillisValue", org.joda.time.LocalTime.fromMillisOfDay(42_000L))
+                  .set("timestampMicrosValue", org.joda.time.Instant.ofEpochSecond(42L))
+                  .set("timestampMillisValue", org.joda.time.Instant.ofEpochSecond(42L))
+                  .set(
+                      "localTimestampMicrosValue",
+                      new org.joda.time.LocalDateTime(42_000L, org.joda.time.DateTimeZone.UTC))
+                  .set(
+                      "localTimestampMillisValue",
+                      new org.joda.time.LocalDateTime(42_000L, org.joda.time.DateTimeZone.UTC))
+                  .set("uuidValue", uuid)
+                  .build());
 
       javaTimeLogicalTypesRecord =
-          new GenericRecordBuilder(LOGICAL_TYPES_SCHEMA)
-              .set("numericValue", numeric)
-              .set("bigNumericValue", bigNumeric)
-              .set("dateValue", java.time.LocalDate.ofEpochDay(42L))
-              .set("timeMicrosValue", java.time.LocalTime.ofSecondOfDay(42L))
-              .set("timeMillisValue", java.time.LocalTime.ofSecondOfDay(42L))
-              .set("timestampMicrosValue", java.time.Instant.ofEpochSecond(42L))
-              .set("timestampMillisValue", java.time.Instant.ofEpochSecond(42L))
-              .set(
-                  "localTimestampMicrosValue",
-                  java.time.LocalDateTime.ofEpochSecond(42L, 0, java.time.ZoneOffset.UTC))
-              .set(
-                  "localTimestampMillisValue",
-                  java.time.LocalDateTime.ofEpochSecond(42L, 0, java.time.ZoneOffset.UTC))
-              .set("uuidValue", uuid)
-              .build();
+          CoderUtils.clone(
+              AvroCoder.generic(LOGICAL_TYPES_SCHEMA),
+              new GenericRecordBuilder(LOGICAL_TYPES_SCHEMA)
+                  .set("numericValue", numeric)
+                  .set("bigNumericValue", bigNumeric)
+                  .set("dateValue", java.time.LocalDate.ofEpochDay(42L))
+                  .set("timeMicrosValue", java.time.LocalTime.ofSecondOfDay(42L))
+                  .set("timeMillisValue", java.time.LocalTime.ofSecondOfDay(42L))
+                  .set("timestampMicrosValue", java.time.Instant.ofEpochSecond(42L))
+                  .set("timestampMillisValue", java.time.Instant.ofEpochSecond(42L))
+                  .set(
+                      "localTimestampMicrosValue",
+                      java.time.LocalDateTime.ofEpochSecond(42L, 0, java.time.ZoneOffset.UTC))
+                  .set(
+                      "localTimestampMillisValue",
+                      java.time.LocalDateTime.ofEpochSecond(42L, 0, java.time.ZoneOffset.UTC))
+                  .set("uuidValue", uuid)
+                  .build());
 
       baseProtoExpectedFields =
           ImmutableMap.<String, Object>builder()
@@ -465,11 +476,13 @@ public class AvroGenericRecordToStorageApiProtoTest {
               .put("uuidvalue", uuid.toString())
               .build();
       nestedRecord =
-          new GenericRecordBuilder(NESTED_SCHEMA)
-              .set("nested", baseRecord)
-              .set("nestedArray", ImmutableList.of(baseRecord, baseRecord))
-              .build();
-    } catch (NoSuchAlgorithmException ex) {
+          CoderUtils.clone(
+              AvroCoder.generic(BASE_SCHEMA),
+              new GenericRecordBuilder(NESTED_SCHEMA)
+                  .set("nested", baseRecord)
+                  .set("nestedArray", ImmutableList.of(baseRecord, baseRecord))
+                  .build());
+    } catch (NoSuchAlgorithmException | CoderException ex) {
       throw new RuntimeException("Error initializing test data", ex);
     }
   }
