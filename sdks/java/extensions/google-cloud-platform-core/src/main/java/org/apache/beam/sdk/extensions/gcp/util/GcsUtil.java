@@ -782,11 +782,6 @@ public class GcsUtil {
         setCredentialsMethod.setAccessible(true);
         builder = setCredentialsMethod.invoke(builder, credentials);
 
-        final Method setHttpRequestInitializerMethod =
-            builderClass.getMethod("setHttpRequestInitializer", HttpRequestInitializer.class);
-        setHttpRequestInitializerMethod.setAccessible(true);
-        builder = setHttpRequestInitializerMethod.invoke(builder, httpRequestInitializer);
-
         final Method buildMethod = builderClass.getMethod("build");
         buildMethod.setAccessible(true);
         return (GoogleCloudStorage) buildMethod.invoke(builder);
