@@ -68,7 +68,7 @@ class WatchForSnapshots extends PTransform<PBegin, PCollection<KV<String, List<S
   @Override
   public PCollection<KV<String, List<SnapshotInfo>>> expand(PBegin input) {
     return input
-        .apply(Create.of(scanConfig.getTableIdentifier()))
+        .apply(Create.of(scanConfig.getTableIdentifier().toString()))
         .apply(
             "Scan Table Snapshots",
             Watch.growthOf(new SnapshotPollFn(scanConfig))

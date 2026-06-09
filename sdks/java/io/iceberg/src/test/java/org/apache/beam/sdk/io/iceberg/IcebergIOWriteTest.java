@@ -517,16 +517,17 @@ public class IcebergIOWriteTest implements Serializable {
             .apply(Redistribute.byKey())
             .apply(Values.create());
 
-    Function<String, MapElements<KV<String, SnapshotInfo>, KV<String, Integer>>> getAddedFilesFunc =
-        (distribution) ->
-            MapElements.into(kvs(strings(), integers()))
-                .via(
-                    snapshot ->
-                        KV.of(
-                            distribution,
-                            Integer.parseInt(
-                                checkStateNotNull(snapshot.getValue().getSummary())
-                                    .get("added-data-files"))));
+    Function<String, MapElements<KV<TableIdentifier, SnapshotInfo>, KV<String, Integer>>>
+        getAddedFilesFunc =
+            (distribution) ->
+                MapElements.into(kvs(strings(), integers()))
+                    .via(
+                        snapshot ->
+                            KV.of(
+                                distribution,
+                                Integer.parseInt(
+                                    checkStateNotNull(snapshot.getValue().getSummary())
+                                        .get("added-data-files"))));
 
     // 1. Write files without any additional config
     PCollection<KV<String, Integer>> noneDistributionAddedFiles =
@@ -673,16 +674,17 @@ public class IcebergIOWriteTest implements Serializable {
             .apply(Redistribute.byKey())
             .apply(Values.create());
 
-    Function<String, MapElements<KV<String, SnapshotInfo>, KV<String, Integer>>> getAddedFilesFunc =
-        (distribution) ->
-            MapElements.into(kvs(strings(), integers()))
-                .via(
-                    snapshot ->
-                        KV.of(
-                            distribution,
-                            Integer.parseInt(
-                                checkStateNotNull(snapshot.getValue().getSummary())
-                                    .get("added-data-files"))));
+    Function<String, MapElements<KV<TableIdentifier, SnapshotInfo>, KV<String, Integer>>>
+        getAddedFilesFunc =
+            (distribution) ->
+                MapElements.into(kvs(strings(), integers()))
+                    .via(
+                        snapshot ->
+                            KV.of(
+                                distribution,
+                                Integer.parseInt(
+                                    checkStateNotNull(snapshot.getValue().getSummary())
+                                        .get("added-data-files"))));
 
     // 1. Write files without any additional config
     PCollection<KV<String, Integer>> noneDistributionAddedFiles =

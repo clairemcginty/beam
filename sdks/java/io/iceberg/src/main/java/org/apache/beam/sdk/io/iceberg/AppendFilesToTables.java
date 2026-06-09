@@ -137,8 +137,6 @@ class AppendFilesToTables
         return;
       }
 
-
-
       // vast majority of the time, we will simply append data files.
       // in the rare case we get a batch that contains multiple partition specs, we
       // will group

@@ -63,7 +63,7 @@ class ReadFromTasks extends DoFn<KV<ReadTaskDescriptor, ReadTask>, Row> {
       OutputReceiver<Row> out)
       throws IOException, ExecutionException, InterruptedException {
     ReadTask readTask = element.getValue();
-    Table table = TableCache.get(scanConfig.getTableIdentifier());
+    Table table = TableCache.get(scanConfig.getTableIdentifier().toString());
 
     List<FileScanTask> fileScanTasks = readTask.getFileScanTasks();
 

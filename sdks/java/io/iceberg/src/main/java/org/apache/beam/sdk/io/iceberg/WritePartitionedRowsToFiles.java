@@ -109,9 +109,10 @@ class WritePartitionedRowsToFiles
     public void processElement(
         @Element KV<Row, Iterable<Row>> element, OutputReceiver<FileWriteResult> out)
         throws Exception {
-      String tableIdentifier = checkStateNotNull(element.getKey().getString(DESTINATION));
+      String tableIdentifierStr = checkStateNotNull(element.getKey().getString(DESTINATION));
       String partitionPath = checkStateNotNull(element.getKey().getString(PARTITION));
 
+      TableIdentifier tableIdentifier = TableIdentifier.parse(tableIdentifierStr);
       IcebergDestination destination = dynamicDestinations.instantiateDestination(tableIdentifier);
       LastRefreshedTable lastRefreshedTable = getOrCreateTable(destination, dataSchema);
       Table table = lastRefreshedTable.table;

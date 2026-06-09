@@ -565,7 +565,9 @@ public class IcebergWriteSchemaTransformProviderTest {
             .get(SNAPSHOTS_TAG);
 
     PAssert.that(result)
-        .satisfies(new VerifyOutputs(Collections.singletonList(identifier), "append"));
+        .satisfies(
+            new VerifyOutputs(
+                Collections.singletonList(TableIdentifier.parse(identifier)), "append"));
     testPipeline.run().waitUntilFinish();
 
     Pipeline p = Pipeline.create(TestPipeline.testingPipelineOptions());
@@ -627,7 +629,9 @@ public class IcebergWriteSchemaTransformProviderTest {
             .get(SNAPSHOTS_TAG);
 
     PAssert.that(result)
-        .satisfies(new VerifyOutputs(Collections.singletonList(identifier), "append"));
+        .satisfies(
+            new VerifyOutputs(
+                Collections.singletonList(TableIdentifier.parse(identifier)), "append"));
     testPipeline.run().waitUntilFinish();
 
     // Read back and check records are correct
@@ -682,7 +686,9 @@ public class IcebergWriteSchemaTransformProviderTest {
             .get(SNAPSHOTS_TAG);
 
     PAssert.that(result)
-        .satisfies(new VerifyOutputs(Collections.singletonList(identifier), "append"));
+        .satisfies(
+            new VerifyOutputs(
+                Collections.singletonList(TableIdentifier.parse(identifier)), "append"));
     testPipeline.run().waitUntilFinish();
 
     // Read back and check records are correct

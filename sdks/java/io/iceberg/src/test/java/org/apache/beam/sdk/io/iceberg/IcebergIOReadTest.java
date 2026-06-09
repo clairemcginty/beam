@@ -111,8 +111,7 @@ public class IcebergIOReadTest {
 
   @Parameters
   public static Iterable<Object[]> data() {
-    String jsonId =
-        String.format("{\"namespace\": [\"default\"], \"name\": \"%s\"}", tableId());
+    String jsonId = String.format("{\"namespace\": [\"default\"], \"name\": \"%s\"}", tableId());
     String dottedId = String.format("default.%s", tableId());
     return asList(
         new Object[][] {{false, jsonId}, {false, dottedId}, {true, jsonId}, {true, dottedId}});

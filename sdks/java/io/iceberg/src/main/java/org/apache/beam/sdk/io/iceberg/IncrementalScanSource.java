@@ -33,7 +33,6 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.base.MoreObjects;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.catalog.TableIdentifier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.Duration;
 
@@ -53,10 +52,7 @@ class IncrementalScanSource extends PTransform<PBegin, PCollection<Row>> {
   @Override
   public PCollection<Row> expand(PBegin input) {
     Table table =
-        scanConfig
-            .getCatalogConfig()
-            .catalog()
-            .loadTable(TableIdentifier.parse(scanConfig.getTableIdentifier()));
+        scanConfig.getCatalogConfig().catalog().loadTable(scanConfig.getTableIdentifier());
 
     PCollection<KV<String, List<SnapshotInfo>>> snapshots =
         MoreObjects.firstNonNull(scanConfig.getStreaming(), false)
@@ -92,11 +88,9 @@ class IncrementalScanSource extends PTransform<PBegin, PCollection<Row>> {
     long to =
         MoreObjects.firstNonNull(
             ReadUtils.getToSnapshot(table, scanConfig), table.currentSnapshot().snapshotId());
+    String tableId = scanConfig.getTableIdentifier().toString();
     return input.apply(
         "Create Snapshot Range",
-        Create.of(
-            KV.of(
-                scanConfig.getTableIdentifier(),
-                ReadUtils.snapshotsBetween(table, scanConfig.getTableIdentifier(), from, to))));
+        Create.of(KV.of(tableId, ReadUtils.snapshotsBetween(table, tableId, from, to))));
   }
 }

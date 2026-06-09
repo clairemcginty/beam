@@ -36,6 +36,7 @@ import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.Row;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.joda.time.Duration;
 
@@ -110,7 +111,7 @@ class WriteToPartitions extends PTransform<PCollection<KV<Row, Row>>, IcebergWri
     }
 
     // Commit files to tables
-    PCollection<KV<String, SnapshotInfo>> snapshots =
+    PCollection<KV<TableIdentifier, SnapshotInfo>> snapshots =
         writtenFiles.apply(new AppendFilesToTables(catalogConfig, filePrefix));
 
     return new IcebergWriteResult(input.getPipeline(), snapshots);

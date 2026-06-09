@@ -71,7 +71,7 @@ class TableCache {
   }
 
   static void setup(IcebergScanConfig scanConfig) {
-    String tableIdentifier = scanConfig.getTableIdentifier();
+    String tableIdentifier = scanConfig.getTableIdentifier().toString();
     IcebergCatalogConfig catalogConfig = scanConfig.getCatalogConfig();
     if (CATALOG_CACHE.containsKey(tableIdentifier)) {
       checkState(
@@ -80,7 +80,7 @@ class TableCache {
           CATALOG_CACHE.get(tableIdentifier),
           catalogConfig);
     } else {
-      CATALOG_CACHE.put(scanConfig.getTableIdentifier(), scanConfig.getCatalogConfig());
+      CATALOG_CACHE.put(tableIdentifier, scanConfig.getCatalogConfig());
     }
   }
 }

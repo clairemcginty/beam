@@ -135,10 +135,8 @@ class WriteToDestinations
     checkArgumentNotNull(
         directWriteByteLimit, "Must set non-null directWriteByteLimit for bundle lifting.");
 
-    final TupleTag<KV<TableIdentifier, Row>> groupedRecordsTag =
-        new TupleTag<>("small_batches");
-    final TupleTag<KV<TableIdentifier, Row>> directRecordsTag =
-        new TupleTag<>("large_batches");
+    final TupleTag<KV<TableIdentifier, Row>> groupedRecordsTag = new TupleTag<>("small_batches");
+    final TupleTag<KV<TableIdentifier, Row>> directRecordsTag = new TupleTag<>("large_batches");
 
     input = input.apply("WindowIntoGlobal", Window.into(new GlobalWindows()));
     PCollectionTuple bundleOutputs =
@@ -151,15 +149,13 @@ class WriteToDestinations
             .get(groupedRecordsTag)
             .setCoder(
                 KvCoder.of(
-                    TableIdentifierCoder.of(),
-                    RowCoder.of(dynamicDestinations.getDataSchema())));
+                    TableIdentifierCoder.of(), RowCoder.of(dynamicDestinations.getDataSchema())));
     PCollection<KV<TableIdentifier, Row>> largeBatches =
         bundleOutputs
             .get(directRecordsTag)
             .setCoder(
                 KvCoder.of(
-                    TableIdentifierCoder.of(),
-                    RowCoder.of(dynamicDestinations.getDataSchema())));
+                    TableIdentifierCoder.of(), RowCoder.of(dynamicDestinations.getDataSchema())));
 
     PCollection<FileWriteResult> directFileWrites =
         largeBatches.apply(
@@ -219,8 +215,7 @@ class WriteToDestinations
    * A SerializableFunction to estimate the byte size of a Row for bundling purposes. This is a
    * heuristic that avoids the high cost of encoding each row with a Coder.
    */
-  private static class RowSizer
-      implements SerializableFunction<KV<TableIdentifier, Row>, Integer> {
+  private static class RowSizer implements SerializableFunction<KV<TableIdentifier, Row>, Integer> {
     @Override
     public Integer apply(KV<TableIdentifier, Row> element) {
       return estimateRowSize(element.getValue());

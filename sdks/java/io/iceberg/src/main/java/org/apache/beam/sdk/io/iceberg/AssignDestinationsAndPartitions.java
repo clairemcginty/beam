@@ -108,17 +108,20 @@ class AssignDestinationsAndPartitions
         @Timestamp Instant timestamp,
         OutputReceiver<KV<Row, Row>> out) {
 
-      String tableIdentifier =
-          dynamicDestinations.getTableStringIdentifier(
+      SerializableTableIdentifier serializableTableId =
+          dynamicDestinations.getTableIdentifier(
               ValueInSingleWindow.of(element, timestamp, window, paneInfo));
+      TableIdentifier tableIdentifier = serializableTableId.toTableIdentifier();
+      String tableIdentifierStr = tableIdentifier.toString();
 
       Row data = dynamicDestinations.getData(element);
 
-      @Nullable PartitionKey partitionKey = checkStateNotNull(partitionKeys).get(tableIdentifier);
+      @Nullable
+      PartitionKey partitionKey = checkStateNotNull(partitionKeys).get(tableIdentifierStr);
 
-      @Nullable BeamRowWrapper wrapper = checkStateNotNull(wrappers).get(tableIdentifier);
+      @Nullable BeamRowWrapper wrapper = checkStateNotNull(wrappers).get(tableIdentifierStr);
 
-      @Nullable Instant lastRefresh = checkStateNotNull(lastRefreshTimes).get(tableIdentifier);
+      @Nullable Instant lastRefresh = checkStateNotNull(lastRefreshTimes).get(tableIdentifierStr);
 
       Instant now = Instant.now();
 
@@ -147,7 +150,7 @@ class AssignDestinationsAndPartitions
 
           try {
             // see if table already exists with a spec
-            spec = catalogConfig.catalog().loadTable(TableIdentifier.parse(tableIdentifier)).spec();
+            spec = catalogConfig.catalog().loadTable(tableIdentifier).spec();
 
           } catch (NoSuchTableException ignored) {
             // no partition to apply
@@ -158,11 +161,11 @@ class AssignDestinationsAndPartitions
 
         wrapper = new BeamRowWrapper(data.getSchema(), schema.asStruct());
 
-        checkStateNotNull(partitionKeys).put(tableIdentifier, partitionKey);
+        checkStateNotNull(partitionKeys).put(tableIdentifierStr, partitionKey);
 
-        checkStateNotNull(wrappers).put(tableIdentifier, wrapper);
+        checkStateNotNull(wrappers).put(tableIdentifierStr, wrapper);
 
-        checkStateNotNull(lastRefreshTimes).put(tableIdentifier, now);
+        checkStateNotNull(lastRefreshTimes).put(tableIdentifierStr, now);
       }
 
       partitionKey = checkStateNotNull(partitionKey);
@@ -173,7 +176,7 @@ class AssignDestinationsAndPartitions
       String partitionPath = partitionKey.toPath();
 
       Row destAndPartition =
-          Row.withSchema(OUTPUT_SCHEMA).addValues(tableIdentifier, partitionPath).build();
+          Row.withSchema(OUTPUT_SCHEMA).addValues(tableIdentifierStr, partitionPath).build();
 
       out.output(KV.of(destAndPartition, data));
     }
