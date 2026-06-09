@@ -20,6 +20,7 @@ package org.apache.beam.sdk.io.iceberg;
 import static org.apache.beam.sdk.io.iceberg.IcebergUtils.TypeAndMaxId;
 import static org.apache.beam.sdk.io.iceberg.IcebergUtils.beamFieldTypeToIcebergFieldType;
 import static org.apache.beam.sdk.io.iceberg.IcebergUtils.parseTableIdentifier;
+import static org.apache.beam.sdk.io.iceberg.IcebergUtils.resolveTableIdentifier;
 import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -47,6 +48,7 @@ import org.apache.beam.sdk.schemas.logicaltypes.VariableString;
 import org.apache.beam.sdk.values.Row;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableMap;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.Iterables;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.types.Type;
@@ -1079,6 +1081,50 @@ public class IcebergUtilsTest {
       } else {
         assertThrows(IllegalArgumentException.class, () -> parseTableIdentifier(input));
       }
+    }
+  }
+
+  @RunWith(JUnit4.class)
+  public static class ResolveTableIdentifierTests {
+    @Test
+    public void testWithTableNamespaceAndTableName() {
+      TableIdentifier id = resolveTableIdentifier(null, "my_namespace", "My.Dotted.Table.Name");
+      assertEquals("my_namespace", id.namespace().toString());
+      assertEquals("My.Dotted.Table.Name", id.name());
+    }
+
+    @Test
+    public void testWithMultiLevelNamespace() {
+      TableIdentifier id = resolveTableIdentifier(null, "level1.level2", "table");
+      assertEquals("level1.level2", id.namespace().toString());
+      assertEquals("table", id.name());
+    }
+
+    @Test
+    public void testWithTableNameOnly() {
+      TableIdentifier id = resolveTableIdentifier(null, null, "my_table");
+      assertTrue(id.namespace().isEmpty());
+      assertEquals("my_table", id.name());
+    }
+
+    @Test
+    public void testFallsBackToTable() {
+      TableIdentifier id = resolveTableIdentifier("db.my_table", null, null);
+      assertEquals("db", id.namespace().toString());
+      assertEquals("my_table", id.name());
+    }
+
+    @Test
+    public void testTableNameTakesPrecedence() {
+      TableIdentifier id =
+          resolveTableIdentifier("db.wrong_table", "my_namespace", "My.Dotted.Table.Name");
+      assertEquals("my_namespace", id.namespace().toString());
+      assertEquals("My.Dotted.Table.Name", id.name());
+    }
+
+    @Test
+    public void testFailsWithNoInput() {
+      assertThrows(RuntimeException.class, () -> resolveTableIdentifier(null, null, null));
     }
   }
 }

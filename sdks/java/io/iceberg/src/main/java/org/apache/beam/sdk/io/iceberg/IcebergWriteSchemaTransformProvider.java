@@ -81,8 +81,19 @@ public class IcebergWriteSchemaTransformProvider
 
     @SchemaFieldDescription(
         "A fully-qualified table identifier. You may also provide a template to write to multiple dynamic destinations,"
-            + " for example: `dataset.my_{col1}_{col2.nested}_table`.")
-    public abstract String getTable();
+            + " for example: `dataset.my_{col1}_{col2.nested}_table`."
+            + " For table names containing dots, prefer setting 'table_namespace' and 'table_name' instead.")
+    public abstract @Nullable String getTable();
+
+    @SchemaFieldDescription(
+        "Namespace of the Iceberg table. "
+            + "Use together with 'table_name' for table names that contain dots.")
+    public abstract @Nullable String getTableNamespace();
+
+    @SchemaFieldDescription(
+        "Name of the Iceberg table. "
+            + "Use together with 'table_namespace' for table names that contain dots.")
+    public abstract @Nullable String getTableName();
 
     @SchemaFieldDescription("Name of the catalog containing the table.")
     public abstract @Nullable String getCatalogName();
@@ -159,9 +170,17 @@ public class IcebergWriteSchemaTransformProvider
             + "during high-throughput writes. Only available with 'hash' distribution mode.")
     public abstract @Nullable Boolean getAutosharding();
 
+    public org.apache.iceberg.catalog.TableIdentifier getTableIdentifier() {
+      return IcebergUtils.resolveTableIdentifier(getTable(), getTableNamespace(), getTableName());
+    }
+
     @AutoValue.Builder
     public abstract static class Builder {
       public abstract Builder setTable(String table);
+
+      public abstract Builder setTableNamespace(String tableNamespace);
+
+      public abstract Builder setTableName(String tableName);
 
       public abstract Builder setCatalogName(String catalogName);
 
@@ -250,7 +269,7 @@ public class IcebergWriteSchemaTransformProvider
           IcebergIO.writeRows(configuration.getIcebergCatalog())
               .to(
                   new PortableIcebergDestinations(
-                      IcebergUtils.parseTableIdentifier(configuration.getTable()),
+                      configuration.getTableIdentifier(),
                       FileFormat.PARQUET.toString(),
                       rows.getSchema(),
                       configuration.getPartitionFields(),

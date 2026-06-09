@@ -92,7 +92,7 @@ public class IcebergReadSchemaTransformProvider
               .getPipeline()
               .apply(
                   IcebergIO.readRows(configuration.getIcebergCatalog())
-                      .from(IcebergUtils.parseTableIdentifier(configuration.getTable()))
+                      .from(configuration.getTableIdentifier())
                       .keeping(configuration.getKeep())
                       .dropping(configuration.getDrop())
                       .withFilter(configuration.getFilter()));
@@ -108,8 +108,21 @@ public class IcebergReadSchemaTransformProvider
       return new AutoValue_IcebergReadSchemaTransformProvider_Configuration.Builder();
     }
 
-    @SchemaFieldDescription("Identifier of the Iceberg table.")
-    abstract String getTable();
+    @SchemaFieldDescription(
+        "Identifier of the Iceberg table. May be a dot-separated identifier (e.g. 'db.table') "
+            + "or a JSON TableIdentifier (e.g. '{\"namespace\":[\"db\"],\"name\":\"table.with.dots\"}')."
+            + " For table names containing dots, prefer setting 'table_namespace' and 'table_name' instead.")
+    abstract @Nullable String getTable();
+
+    @SchemaFieldDescription(
+        "Namespace of the Iceberg table. "
+            + "Use together with 'table_name' for table names that contain dots.")
+    abstract @Nullable String getTableNamespace();
+
+    @SchemaFieldDescription(
+        "Name of the Iceberg table. "
+            + "Use together with 'table_namespace' for table names that contain dots.")
+    abstract @Nullable String getTableName();
 
     @SchemaFieldDescription("Name of the catalog containing the table.")
     @Nullable
@@ -137,9 +150,17 @@ public class IcebergReadSchemaTransformProvider
     @Nullable
     abstract String getFilter();
 
+    org.apache.iceberg.catalog.TableIdentifier getTableIdentifier() {
+      return IcebergUtils.resolveTableIdentifier(getTable(), getTableNamespace(), getTableName());
+    }
+
     @AutoValue.Builder
     abstract static class Builder {
       abstract Builder setTable(String table);
+
+      abstract Builder setTableNamespace(String tableNamespace);
+
+      abstract Builder setTableName(String tableName);
 
       abstract Builder setCatalogName(String catalogName);
 

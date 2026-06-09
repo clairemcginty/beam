@@ -49,6 +49,7 @@ import org.apache.beam.sdk.values.Row;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.annotations.VisibleForTesting;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableList;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableMap;
+import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.catalog.TableIdentifierParser;
 import org.apache.iceberg.data.GenericRecord;
@@ -654,5 +655,16 @@ public class IcebergUtils {
     } catch (JsonProcessingException e) {
       return TableIdentifier.parse(table);
     }
+  }
+
+  public static TableIdentifier resolveTableIdentifier(
+      @Nullable String table, @Nullable String tableNamespace, @Nullable String tableName) {
+    if (tableName != null) {
+      Namespace namespace =
+          tableNamespace != null ? Namespace.of(tableNamespace.split("\\.")) : Namespace.empty();
+      return TableIdentifier.of(namespace, tableName);
+    }
+    return parseTableIdentifier(
+        checkArgumentNotNull(table, "Must set either 'table' or 'table_name'."));
   }
 }
